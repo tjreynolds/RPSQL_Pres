@@ -1,0 +1,10 @@
+base
+slidify
+slidifyLibraries
+DBI
+RPostgreSQL
+dplyr
+maps
+sp
+maptools
+RColorBrewer

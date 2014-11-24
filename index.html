@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>R, SQL, and You</title>
+  <meta charset="utf-8">
+  <meta name="description" content="R, SQL, and You">
+  <meta name="author" content="Thomas Reynolds">
+  <meta name="generator" content="slidify" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/default.css" media="all" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/phone.css" 
+    media="only screen and (max-device-width: 480px)" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/slidify.css" >
+  <link rel="stylesheet" href="libraries/highlighters/highlight.js/css/tomorrow.css" />
+  <base target="_blank"> <!-- This amazingness opens all links in a new tab. -->  <link rel=stylesheet href="./assets/css/ribbons.css"></link>
+
+  
+  <!-- Grab CDN jQuery, fall back to local if offline -->
+  <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.min.js"></script>
+  <script>window.jQuery || document.write('<script src="libraries/widgets/quiz/js/jquery.js"><\/script>')</script> 
+  <script data-main="libraries/frameworks/io2012/js/slides" 
+    src="libraries/frameworks/io2012/js/require-1.0.8.min.js">
+  </script>
+  
+  
+
+</head>
+<body style="opacity: 0">
+  <slides class="layout-widescreen">
+    
+    <!-- LOGO SLIDE -->
+        <slide class="title-slide segue nobackground">
+  <hgroup class="auto-fadein">
+    <h1>R, SQL, and You</h1>
+    <h2>Adapting R to relational databases</h2>
+    <p>Thomas Reynolds<br/></p>
+  </hgroup>
+  <article></article>  
+</slide>
+    
+
+    <!-- SLIDES -->
+    <slide class="" id="slide-1" style="background:;">
+  <hgroup>
+    <h2>Motivation for Project</h2>
+  </hgroup>
+  <article data-timings="">
+    <blockquote>
+<p>In many production environments, the data you want lives in a relational or SQL database, not in files. Public data is often in files (as they are easier to share), but your most important client data is often in databases. Relational databases scale easily to the millions of records and supply important production features such as parallelism, consistency, transactions, logging, and audits. When you’re working with transaction data, you’re likely to find it already stored in a relational database, as relational databases excel at online transaction processing (OLTP).</p>
+</blockquote>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-2" style="background:;">
+  <hgroup>
+    <h2>Motivation for Project</h2>
+  </hgroup>
+  <article data-timings="">
+    <p><strong>SQL&#39;s shortcomings</strong></p>
+
+<ul>
+<li>Not great for analysis, <em>e.g.</em> linear regression</li>
+<li>Relational format, not discrete file</li>
+</ul>
+
+<h2>Motivation for Project</h2>
+
+<p><strong>What about R?</strong></p>
+
+<ul>
+<li>Favorite of data scientists</li>
+<li>Easily extensible for variety of applications</li>
+<li><strong>All work done locally and in-memory</strong></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="slide-3" style="background:;">
+  <hgroup>
+    <h2>Relational work in R</h2>
+  </hgroup>
+  <article data-timings="">
+    <p><img src="http://img2.timeinc.net/health/images/slides/reeses-peanut-butter-400x400.jpg" alt="Two great tastes that go great together"></p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="slide-4" style="background:;">
+  <hgroup>
+    <h2>First Example: Human Bidirectional Promoters</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">library(DBI)
+library(RPostgreSQL)
+drv &lt;- dbDriver(&quot;PostgreSQL&quot;)
+host &lt;- &quot;127.0.0.1&quot;
+port &lt;- &quot;5432&quot;
+username &lt;- &quot;vagrant&quot;
+password &lt;- &quot;vagrant&quot;
+
+conn &lt;- dbConnect(drv, dbname = &quot;hg19db&quot;, username, password, host, port)
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="slide-5" style="background:;">
+  <hgroup>
+    <h2>First Example, part 2</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">allpairs &lt;- dbGetQuery(conn, &quot;SELECT pos.chrom as chrom,
+                       pos.tss as pos_tss, neg.tss as neg_tss, 
+                       pos.symbol as pos_symbol, neg.symbol as neg_symbol, 
+                       (pos.tss - neg.tss) as spacing 
+                       FROM posgene AS pos, neggene AS neg 
+                       WHERE pos.chrom = neg.chrom
+                       AND abs(pos.tss - neg.tss) &lt; 1000
+                       ORDER BY chrom, pos.tss&quot;)
+head(allpairs)
+</code></pre>
+
+<pre><code>##   chrom pos_tss neg_tss pos_symbol neg_symbol spacing
+## 1  chr1  762970  762902  LINC01128  LINC00115      68
+## 2  chr1  763177  762902  LINC01128  LINC00115     275
+## 3  chr1 1167628 1167447    B3GALT6       SDF4     181
+## 4  chr1 1243993 1243269      PUSL1      ACAP3     724
+## 5  chr1 1260142 1260067       CPTP     CPSF3L      75
+## 6  chr1 1334909 1334718  LOC148413      CCNL2     191
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="slide-6" style="background:;">
+  <hgroup>
+    <h2>First Example, part 3</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">hist(allpairs$spacing, breaks = 21, main = &quot;Bidirectional Promoter Spacing&quot;, 
+    xlab = &quot;spacing between + and - TSS&quot;)
+</code></pre>
+
+<p><img src="assets/fig/PairHistogram-1.png" alt="plot of chunk PairHistogram"> </p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="slide-7" style="background:;">
+  <hgroup>
+    <h2>First Example, part 4</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">bidir_pair &lt;-(allpairs[allpairs$spacing &gt; 0,])
+num_bidir_prom &lt;- nrow(as.table(unique(bidir_pair$pos_tss))) 
++ nrow(as.table(unique(bidir_pair$neg_tss)))
+</code></pre>
+
+<pre><code>## [1] 1888
+</code></pre>
+
+<pre><code class="r">total_tss &lt;- nrow(dbGetQuery(conn, &quot;SELECT tss from posgene&quot;)) 
++ nrow(dbGetQuery(conn, &quot;SELECT tss from neggene&quot;))
+</code></pre>
+
+<pre><code>## [1] 16445
+</code></pre>
+
+<pre><code class="r">bidir_percent  &lt;- (num_bidir_prom / total_tss) * 100
+invisible(dbDisconnect(conn))
+</code></pre>
+
+<p>If we define a bidirectional promoter pair as two promoters on complementary strands within 1000 bp of each others&#39; TSSes, then there are 1896 such pairs in hg19. 11.1385266% of hg19 refGene promoters are bidirectional, according to our analysis.</p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="slide-8" style="background:;">
+  <hgroup>
+    <h2>First Example, Reconsidered</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code>allpairs &lt;- dbGetQuery(conn, &quot;SELECT pos.chrom as chrom,
+                       pos.tss as pos_tss,
+                       neg.tss as neg_tss, 
+                       pos.symbol as pos_symbol,
+                       neg.symbol as neg_symbol, 
+                       (pos.tss - neg.tss) as spacing 
+                       FROM posgene AS pos, neggene AS neg 
+                       WHERE pos.chrom = neg.chrom
+                       AND abs(pos.tss - neg.tss) &lt; 1000
+                       ORDER BY chrom, pos.tss&quot;)
+</code></pre>
+
+<blockquote>
+<p><em>Requires a great deal of work in PostgreSQL to set up</em></p>
+</blockquote>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="slide-9" style="background:;">
+  <hgroup>
+    <h2>Second Example: CDC VAERS</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">library(DBI)
+library(RPostgreSQL)
+library(dplyr)
+library(maps)
+library(maptools)
+library(RColorBrewer)
+
+vaers &lt;- src_postgres(dbname = &quot;vaccinedb&quot;, host = &quot;127.0.0.1&quot;, port = &quot;5432&quot;, 
+    user = &quot;vagrant&quot;, password = &quot;vagrant&quot;)
+vaersdata &lt;- tbl(vaers, &quot;vaersdata&quot;)
+vaersvax &lt;- tbl(vaers, &quot;vaersvax&quot;)
+vaerssymptoms &lt;- tbl(vaers, &quot;vaerssymptoms&quot;)
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="slide-10" style="background:;">
+  <hgroup>
+    <h2>Second Example, part 2</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">stateevents &lt;- vaersdata %&gt;% select(state, vaers_id)
+statetotals &lt;- stateevents %&gt;% count(state) %&gt;% arrange(state)
+
+statefluevents &lt;- vaersvax %&gt;% group_by(vax_type) %&gt;% filter(vax_type ~ &quot;FLU*&quot;) %&gt;% 
+    select(vaers_id, vax_type) %&gt;% inner_join(select(vaersdata, vaers_id, state)) %&gt;% 
+    select(state, vaers_id)
+stateflutotals &lt;- statefluevents %&gt;% count(state) %&gt;% arrange(state)
+
+abb &lt;- cbind(state.abb)
+sname &lt;- tolower(cbind(state.name))
+abbtoname &lt;- cbind(abb, sname)
+abbtoname &lt;- as.data.frame(as.matrix(abbtoname))
+
+flupercent &lt;- inner_join(stateflutotals, statetotals, by = &quot;state&quot;)
+flupercplot &lt;- collect(flupercent %&gt;% mutate(percent = (n.x * 100)/n.y))
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="slide-11" style="background:;">
+  <hgroup>
+    <h2>Second Example, part 3</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">colors &lt;- brewer.pal(9, &quot;YlGn&quot;)
+flupercplot$colorBuckets &lt;- as.numeric(cut(flupercplot$percent, c(10, 15, 20, 
+    25, 30, 35, 40, 45, 50, 100)))
+fluleg.txt &lt;- c(&quot;&lt;10%&quot;, &quot;10-14%&quot;, &quot;15-19%&quot;, &quot;20-24%&quot;, &quot;25-29%&quot;, &quot;30-34%&quot;, &quot;35-39%&quot;, 
+    &quot;40-44%&quot;, &quot;45-49%&quot;, &quot;50+%&quot;)
+
+states.matched &lt;- abbtoname$state.abb[match(map(&quot;state&quot;, plot = FALSE)$names, 
+    abbtoname$state.name)]
+colorsmatched &lt;- flupercplot$colorBuckets[match(states.matched, flupercplot$state)]
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="slide-12" style="background:;">
+  <hgroup>
+    <h2>Second Example, part 4</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">map(&quot;state&quot;, col = colors[na.omit(colorsmatched)], fill = TRUE)
+legend(&quot;bottomright&quot;, fluleg.txt, horiz = FALSE, fill = colors, cex = 0.5)
+title(&quot;Flu VAEs as Percentage of Total VAEs, 2013&quot;)
+</code></pre>
+
+<p><img src="assets/fig/unnamed-chunk-4-1.png" alt="plot of chunk unnamed-chunk-4"> </p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="slide-13" style="background:;">
+  <hgroup>
+    <h2>Second Example, part 5</h2>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">explain(statefluevents)
+invisible(dbDisconnect(conn))
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+    <slide class="backdrop"></slide>
+  </slides>
+  <div class="pagination pagination-small" id='io2012-ptoc' style="display:none;">
+    <ul>
+      <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=1 title='Motivation for Project'>
+         1
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=2 title='Motivation for Project'>
+         2
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=3 title='Relational work in R'>
+         3
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=4 title='First Example: Human Bidirectional Promoters'>
+         4
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=5 title='First Example, part 2'>
+         5
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=6 title='First Example, part 3'>
+         6
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=7 title='First Example, part 4'>
+         7
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=8 title='First Example, Reconsidered'>
+         8
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=9 title='Second Example: CDC VAERS'>
+         9
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=10 title='Second Example, part 2'>
+         10
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=11 title='Second Example, part 3'>
+         11
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=12 title='Second Example, part 4'>
+         12
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=13 title='Second Example, part 5'>
+         13
+      </a>
+    </li>
+  </ul>
+  </div>  <!--[if IE]>
+    <script 
+      src="http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js">  
+    </script>
+    <script>CFInstall.check({mode: 'overlay'});</script>
+  <![endif]-->
+</body>
+  <!-- Load Javascripts for Widgets -->
+  
+  <!-- LOAD HIGHLIGHTER JS FILES -->
+  <script src="libraries/highlighters/highlight.js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+  <!-- DONE LOADING HIGHLIGHTER JS FILES -->
+   
+  </html>
