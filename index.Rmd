@@ -17,6 +17,8 @@ knit        : slidify::knit2slides
 
  - Zumel and Mount, *Practical Data Science with R*
 
+--- .class
+
 ## Motivation for Project
 
 **SQL's shortcomings**
@@ -24,6 +26,7 @@ knit        : slidify::knit2slides
 - Not great for analysis, *e.g.* linear regression
 - Relational format, not discrete file
 
+--- .class
 
 ## Motivation for Project
 
