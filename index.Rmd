@@ -15,7 +15,7 @@ knit        : slidify::knit2slides
 
 > In many production environments, the data you want lives in a relational or SQL database, not in files. Public data is often in files (as they are easier to share), but your most important client data is often in databases. Relational databases scale easily to the millions of records and supply important production features such as parallelism, consistency, transactions, logging, and audits. When you’re working with transaction data, you’re likely to find it already stored in a relational database, as relational databases excel at online transaction processing (OLTP).
 
---- Zumel and Mount, *Practical Data Science with R*
+ - Zumel and Mount, *Practical Data Science with R*
 
 ## Motivation for Project
 
