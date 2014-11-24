@@ -180,7 +180,7 @@ title("Flu VAEs as Percentage of Total VAEs, 2013")
 
 ## Second Example, part 5
 
-```{r dplyrExamine, tidy=TRUE, message=FALSE}
+```{r, dplyrExamine, tidy=TRUE, message=FALSE}
 explain(statefluevents)
 invisible(dbDisconnect(conn))
 ```
